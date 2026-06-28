@@ -25,6 +25,9 @@ export function RootLayout() {
               <Link to="/">릴리즈</Link>
             </Button>
             <Button asChild variant="ghost" size="sm">
+              <Link to="/admin">관리자</Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm">
               <Link to="/">설정</Link>
             </Button>
           </nav>
