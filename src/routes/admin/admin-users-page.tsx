@@ -12,6 +12,7 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Pagination } from "@/components/ui/pagination";
 import { formatDateTime } from "@/lib/format";
 import { ApiError } from "@/lib/http";
 
@@ -202,30 +203,14 @@ export function AdminUsersPage() {
             </table>
           </div>
 
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-sm text-slate-500">
-              {usersQuery.data.page + 1} /{" "}
-              {Math.max(usersQuery.data.totalPages, 1)} 페이지
-            </span>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={usersQuery.data.first || usersQuery.isFetching}
-                onClick={() => setPage((current) => Math.max(current - 1, 0))}
-              >
-                이전
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={usersQuery.data.last || usersQuery.isFetching}
-                onClick={() => setPage((current) => current + 1)}
-              >
-                다음
-              </Button>
-            </div>
-          </div>
+          {usersQuery.data.totalPages > 1 && (
+            <Pagination
+              page={usersQuery.data.page}
+              totalPages={usersQuery.data.totalPages}
+              onPageChange={setPage}
+              disabled={usersQuery.isFetching}
+            />
+          )}
         </div>
       )}
 

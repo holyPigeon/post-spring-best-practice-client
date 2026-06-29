@@ -167,6 +167,51 @@ describe("AdminUsersPage", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("jumps to a page via its number", async () => {
+    const user = userEvent.setup();
+    const third: AdminUser = {
+      id: 3,
+      email: "third@example.com",
+      nickname: "셋째",
+      role: "USER",
+      createdAt: "2024-03-01T09:00:00",
+      updatedAt: "2024-03-01T09:00:00",
+    };
+    const paged = [users[0], users[1], third];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string | URL) => {
+        const target = String(url);
+        if (target.endsWith("/api/auth/me")) return jsonResponse(meResponse);
+        if (target.includes("/api/admin/users")) {
+          const requestedPage = Number(
+            new URL(target).searchParams.get("page") ?? "0",
+          );
+          return jsonResponse(
+            pageResponse([paged[requestedPage]], {
+              page: requestedPage,
+              size: 1,
+              totalElements: 3,
+              totalPages: 3,
+              first: requestedPage === 0,
+              last: requestedPage === 2,
+            }),
+          );
+        }
+        return jsonResponse({ message: "not found" }, 404);
+      }),
+    );
+
+    renderAt("/admin");
+
+    await screen.findByRole("link", { name: "admin@example.com" });
+    await user.click(screen.getByRole("button", { name: "페이지 3" }));
+
+    expect(
+      await screen.findByRole("link", { name: "third@example.com" }),
+    ).toBeInTheDocument();
+  });
+
   it("shows an empty state when there are no users", async () => {
     stubApi({ users: () => jsonResponse(pageResponse([])) });
 
