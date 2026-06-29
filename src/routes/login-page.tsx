@@ -8,15 +8,17 @@ import { Input } from "@/components/ui/input";
 import { ApiError } from "@/lib/http";
 
 interface LoginLocationState {
-  from?: { pathname?: string };
+  from?: { pathname?: string; search?: string; hash?: string };
 }
 
 export function LoginPage() {
   const { login, status } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from =
-    (location.state as LoginLocationState | null)?.from?.pathname ?? "/";
+  const fromLocation = (location.state as LoginLocationState | null)?.from;
+  const from = fromLocation?.pathname
+    ? `${fromLocation.pathname}${fromLocation.search ?? ""}${fromLocation.hash ?? ""}`
+    : "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

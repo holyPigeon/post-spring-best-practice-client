@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AdminUser } from "@/api/admin";
 import { AuthProvider } from "@/auth/auth-provider";
+import { tokenStore } from "@/lib/http";
 import { routes } from "@/router";
 
 const meResponse = { id: 1, email: "admin@example.com", nickname: "관리자" };
@@ -148,5 +149,34 @@ describe("AdminUsersPage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "삭제하지 못했습니다",
     );
+  });
+
+  it("shows a success message after deleting a user", async () => {
+    const user = userEvent.setup();
+    stubApi({});
+
+    renderAt("/admin");
+
+    await user.click(
+      await screen.findByRole("button", { name: "user@example.com 삭제" }),
+    );
+    await user.click(screen.getByRole("button", { name: "삭제" }));
+
+    expect(await screen.findByText(/계정을 삭제했습니다/)).toBeInTheDocument();
+  });
+
+  it("redirects to login when the session is cleared mid-session", async () => {
+    stubApi({});
+
+    renderAt("/admin");
+    await screen.findByRole("link", { name: "admin@example.com" });
+
+    act(() => {
+      tokenStore.clear();
+    });
+
+    expect(
+      await screen.findByRole("button", { name: "로그인" }),
+    ).toBeInTheDocument();
   });
 });

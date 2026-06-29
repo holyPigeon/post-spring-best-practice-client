@@ -1,5 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useState, type PropsWithChildren } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useSyncExternalStore,
+  type PropsWithChildren,
+} from "react";
 
 import {
   authKeys,
@@ -17,7 +23,11 @@ import { tokenStore } from "@/lib/http";
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const queryClient = useQueryClient();
-  const [accessToken, setAccessToken] = useState(() => tokenStore.getAccess());
+  const accessToken = useSyncExternalStore(
+    tokenStore.subscribe,
+    tokenStore.getAccess,
+    tokenStore.getAccess,
+  );
 
   const meQuery = useQuery({
     queryKey: authKeys.me,
@@ -27,18 +37,27 @@ export function AuthProvider({ children }: PropsWithChildren) {
     staleTime: 5 * 60_000,
   });
 
+  useEffect(() => {
+    // 토큰이 비워지면(만료·다른 탭 로그아웃 포함) 캐시된 사용자 정보를 버린다.
+    if (accessToken === null) {
+      queryClient.removeQueries({ queryKey: authKeys.me });
+    }
+  }, [accessToken, queryClient]);
+
   const login = useCallback(
     async (data: LoginRequest) => {
-      const tokens = await loginRequest(data);
-      setAccessToken(tokens.accessToken);
+      await loginRequest(data);
       await queryClient.invalidateQueries({ queryKey: authKeys.me });
     },
     [queryClient],
   );
 
   const logout = useCallback(async () => {
-    await logoutRequest();
-    setAccessToken(null);
+    try {
+      await logoutRequest();
+    } catch {
+      // 서버 로그아웃 실패는 무시한다. 로컬 토큰은 logout()의 finally에서 정리된다.
+    }
     queryClient.removeQueries({ queryKey: authKeys.me });
   }, [queryClient]);
 

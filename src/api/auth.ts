@@ -36,14 +36,18 @@ export async function login(data: LoginRequest): Promise<AuthTokens> {
 
 export async function logout(): Promise<void> {
   const refreshToken = tokenStore.getRefresh();
-  if (refreshToken) {
-    await request<undefined>("/api/auth/logout", {
-      method: "POST",
-      body: { refreshToken } satisfies LogoutRequest,
-      auth: false,
-    });
+  try {
+    if (refreshToken) {
+      await request<undefined>("/api/auth/logout", {
+        method: "POST",
+        body: { refreshToken } satisfies LogoutRequest,
+        auth: false,
+      });
+    }
+  } finally {
+    // 서버 로그아웃 실패와 무관하게 로컬 세션은 반드시 정리한다.
+    tokenStore.clear();
   }
-  tokenStore.clear();
 }
 
 export async function getMe(): Promise<MeResponse> {

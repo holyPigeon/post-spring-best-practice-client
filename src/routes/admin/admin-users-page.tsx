@@ -1,6 +1,6 @@
 import { Search, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 
 import {
   useAdminUsersQuery,
@@ -50,6 +50,7 @@ export function AdminUsersPage() {
   const usersQuery = useAdminUsersQuery();
   const deleteMutation = useDeleteAdminUserMutation();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
   const [query, setQuery] = useState("");
@@ -64,6 +65,14 @@ export function AdminUsersPage() {
     return () => clearTimeout(timer);
   }, [flash]);
 
+  useEffect(() => {
+    // 한 번 읽은 플래시는 history state에서 지워 뒤로가기 시 다시 뜨지 않게 한다.
+    if ((location.state as AdminUsersLocationState | null)?.flash) {
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location, navigate]);
+
+  // 목록 전량을 받아 클라이언트에서 검색·정렬한다. 백엔드 페이지네이션 도입 시 서버 검색으로 전환해야 한다.
   const visibleUsers = useMemo(() => {
     if (!usersQuery.data) return [];
     const keyword = query.trim().toLowerCase();
@@ -109,7 +118,9 @@ export function AdminUsersPage() {
         </div>
         {usersQuery.isSuccess && (
           <span className="text-sm text-slate-500">
-            {usersQuery.data.length}명
+            {query.trim()
+              ? `${visibleUsers.length} / ${usersQuery.data.length}명`
+              : `${usersQuery.data.length}명`}
           </span>
         )}
       </header>

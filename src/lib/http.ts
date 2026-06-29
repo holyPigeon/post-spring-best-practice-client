@@ -5,16 +5,43 @@ const TOKEN_KEY = {
   refresh: "refreshToken",
 } as const;
 
+type TokenListener = () => void;
+
+const tokenListeners = new Set<TokenListener>();
+
+function notifyTokenChange() {
+  for (const listener of tokenListeners) listener();
+}
+
 export const tokenStore = {
   getAccess: () => localStorage.getItem(TOKEN_KEY.access),
   getRefresh: () => localStorage.getItem(TOKEN_KEY.refresh),
   set: (access: string, refresh: string) => {
     localStorage.setItem(TOKEN_KEY.access, access);
     localStorage.setItem(TOKEN_KEY.refresh, refresh);
+    notifyTokenChange();
   },
   clear: () => {
     localStorage.removeItem(TOKEN_KEY.access);
     localStorage.removeItem(TOKEN_KEY.refresh);
+    notifyTokenChange();
+  },
+  subscribe: (listener: TokenListener) => {
+    tokenListeners.add(listener);
+    const handleStorage = (event: StorageEvent) => {
+      if (
+        event.key === null ||
+        event.key === TOKEN_KEY.access ||
+        event.key === TOKEN_KEY.refresh
+      ) {
+        listener();
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      tokenListeners.delete(listener);
+      window.removeEventListener("storage", handleStorage);
+    };
   },
 };
 
