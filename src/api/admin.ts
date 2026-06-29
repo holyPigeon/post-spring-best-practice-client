@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { type UserRole } from "@/api/auth";
 import { request } from "@/lib/http";
@@ -14,13 +19,30 @@ export interface AdminUser {
   updatedAt: string;
 }
 
+export interface PageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
+}
+
 export const adminUserKeys = {
   all: ["admin", "users"] as const,
+  list: (page: number, size: number) =>
+    [...adminUserKeys.all, "list", page, size] as const,
   detail: (id: number) => [...adminUserKeys.all, id] as const,
 };
 
-async function getAdminUsers(): Promise<AdminUser[]> {
-  return request<AdminUser[]>("/api/admin/users");
+async function getAdminUsers(
+  page: number,
+  size: number,
+): Promise<PageResponse<AdminUser>> {
+  return request<PageResponse<AdminUser>>(
+    `/api/admin/users?page=${page}&size=${size}`,
+  );
 }
 
 async function getAdminUser(id: number): Promise<AdminUser> {
@@ -31,10 +53,11 @@ async function deleteAdminUser(id: number): Promise<undefined> {
   return request<undefined>(`/api/admin/users/${id}`, { method: "DELETE" });
 }
 
-export function useAdminUsersQuery() {
+export function useAdminUsersQuery(page: number, size: number) {
   return useQuery({
-    queryKey: adminUserKeys.all,
-    queryFn: getAdminUsers,
+    queryKey: adminUserKeys.list(page, size),
+    queryFn: () => getAdminUsers(page, size),
+    placeholderData: keepPreviousData,
   });
 }
 
