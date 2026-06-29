@@ -11,14 +11,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Quick Reference
 
-| 작업                 | 먼저 읽을 파일                   |
-| -------------------- | -------------------------------- |
-| 구현 · 리팩터링      | `.claude/coding-style.md`        |
-| UI · 컴포넌트 · 화면 | `.claude/ui-style.md`            |
-| 테스트 작성 · 수정   | `.claude/testing-style.md`       |
-| 커밋 · 브랜치        | `.claude/commit-convention.md`   |
-| 에이전트 문서 수정   | `.claude/documentation-style.md` |
-| 실행 · 검증 명령     | `AGENTS.md`의 Build & Run        |
+| 작업                 | 먼저 읽을 파일                      |
+| -------------------- | ----------------------------------- |
+| 구현 · 리팩터링      | `docs/agent/coding-style.md`        |
+| UI · 컴포넌트 · 화면 | `docs/agent/ui-style.md`            |
+| 테스트 작성 · 수정   | `docs/agent/testing-style.md`       |
+| 커밋 · 브랜치        | `docs/agent/commit-convention.md`   |
+| 에이전트 문서 수정   | `docs/agent/documentation-style.md` |
+| 실행 · 검증 명령     | `AGENTS.md`의 Build & Run           |
 
 작업 시작 전에 관련 문서를 먼저 읽는다. 여러 작업이 섞여 있으면 관련 문서를 모두 읽고, 더 구체적인 문서의 규칙을 우선한다.
 
@@ -80,10 +80,10 @@ tests/e2e/           # Playwright E2E 테스트
 
 ## Working Rules
 
-- 앱 코드 변경 전 `.claude/coding-style.md`를 확인한다.
-- UI를 만들거나 수정할 때 `.claude/ui-style.md`를 확인한다.
-- 테스트를 추가하거나 고칠 때 `.claude/testing-style.md`를 확인한다.
-- 커밋 메시지나 브랜치를 만들 때 `.claude/commit-convention.md`를 확인한다.
-- 에이전트 문서(`AGENTS.md`, `CLAUDE.md`, `.claude/*.md`)를 수정할 때 `.claude/documentation-style.md`를 확인한다.
+- 앱 코드 변경 전 `docs/agent/coding-style.md`를 확인한다.
+- UI를 만들거나 수정할 때 `docs/agent/ui-style.md`를 확인한다.
+- 테스트를 추가하거나 고칠 때 `docs/agent/testing-style.md`를 확인한다.
+- 커밋 메시지나 브랜치를 만들 때 `docs/agent/commit-convention.md`를 확인한다.
+- 에이전트 문서(`AGENTS.md`, `CLAUDE.md`, `docs/agent/*.md`)를 수정할 때 `docs/agent/documentation-style.md`를 확인한다.
 - 런타임 코드를 바꿨다면 최소 `pnpm validate`를 실행한다.
 - 화면 동작, 라우팅, 브라우저 상호작용을 바꿨다면 `pnpm e2e`까지 실행한다.
