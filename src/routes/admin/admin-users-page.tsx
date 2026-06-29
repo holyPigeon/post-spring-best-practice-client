@@ -1,4 +1,4 @@
-import { Trash2 } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 
@@ -6,12 +6,14 @@ import {
   useAdminUsersQuery,
   useDeleteAdminUserMutation,
   type AdminUser,
+  type AdminUserSort,
   type UserRole,
 } from "@/api/admin";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import { formatDateTime } from "@/lib/format";
 import { ApiError } from "@/lib/http";
@@ -19,6 +21,22 @@ import { ApiError } from "@/lib/http";
 import { AdminErrorState } from "./admin-error-state";
 
 const PAGE_SIZE = 20;
+
+const SELECT_CLASS =
+  "h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2";
+
+const sortOptions: { value: AdminUserSort; label: string }[] = [
+  { value: "LATEST", label: "가입 최신순" },
+  { value: "OLDEST", label: "가입 오래된순" },
+];
+
+type RoleFilter = "ALL" | UserRole;
+
+const roleFilterOptions: { value: RoleFilter; label: string }[] = [
+  { value: "ALL", label: "전체 권한" },
+  { value: "ADMIN", label: "관리자" },
+  { value: "USER", label: "사용자" },
+];
 
 interface AdminUsersLocationState {
   flash?: string;
@@ -30,7 +48,27 @@ function roleLabel(role: UserRole): string {
 
 export function AdminUsersPage() {
   const [page, setPage] = useState(0);
-  const usersQuery = useAdminUsersQuery(page, PAGE_SIZE);
+  const [searchInput, setSearchInput] = useState("");
+  const [keyword, setKeyword] = useState("");
+  const [sort, setSort] = useState<AdminUserSort>("LATEST");
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("ALL");
+
+  useEffect(() => {
+    // 검색어는 입력이 멈춘 뒤(디바운스) 서버로 보내고, 새 검색은 1페이지부터 본다.
+    const timer = setTimeout(() => {
+      setKeyword(searchInput.trim());
+      setPage(0);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const usersQuery = useAdminUsersQuery({
+    page,
+    size: PAGE_SIZE,
+    sort,
+    keyword: keyword || undefined,
+    role: roleFilter === "ALL" ? undefined : roleFilter,
+  });
   const deleteMutation = useDeleteAdminUserMutation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -66,6 +104,16 @@ export function AdminUsersPage() {
     }
   }, [usersQuery.data, page]);
 
+  function handleSortChange(value: AdminUserSort) {
+    setSort(value);
+    setPage(0);
+  }
+
+  function handleRoleFilterChange(value: RoleFilter) {
+    setRoleFilter(value);
+    setPage(0);
+  }
+
   function openDelete(user: AdminUser) {
     deleteMutation.reset();
     setDeleteTarget(user);
@@ -93,6 +141,8 @@ export function AdminUsersPage() {
       : deleteMutation.isError
         ? "삭제하지 못했습니다. 잠시 후 다시 시도해 주세요."
         : undefined;
+
+  const isFiltered = keyword.length > 0 || roleFilter !== "ALL";
 
   return (
     <section className="space-y-5">
@@ -128,88 +178,154 @@ export function AdminUsersPage() {
           error={usersQuery.error}
           onRetry={() => usersQuery.refetch()}
         />
-      ) : usersQuery.data.totalElements === 0 ? (
-        <div className="rounded-md border border-slate-200 bg-white p-8 text-center">
-          <p className="text-sm font-medium text-slate-900">
-            표시할 사용자가 없습니다
-          </p>
-          <p className="mt-1 text-sm text-slate-500">
-            새 사용자가 가입하면 여기에 표시됩니다.
-          </p>
-        </div>
       ) : (
         <div className="space-y-4">
-          <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
-            <table className="w-full text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium text-slate-500">
-                <tr>
-                  <th scope="col" className="px-4 py-3">
-                    이메일
-                  </th>
-                  <th scope="col" className="px-4 py-3">
-                    닉네임
-                  </th>
-                  <th scope="col" className="px-4 py-3">
-                    권한
-                  </th>
-                  <th scope="col" className="px-4 py-3">
-                    가입일
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-right">
-                    작업
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {usersQuery.data.content.map((user) => (
-                  <tr key={user.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3">
-                      <Link
-                        to={`/admin/users/${user.id}`}
-                        className="font-medium text-slate-950 underline-offset-2 hover:underline"
-                      >
-                        {user.email}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">
-                      {user.nickname}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge tone={user.role === "ADMIN" ? "info" : "neutral"}>
-                        {roleLabel(user.role)}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-slate-500">
-                      {formatDateTime(user.createdAt)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-1">
-                        <Button asChild variant="ghost" size="sm">
-                          <Link to={`/admin/users/${user.id}`}>보기</Link>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          aria-label={`${user.email} 삭제`}
-                          onClick={() => openDelete(user)}
-                        >
-                          <Trash2 aria-hidden className="size-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative sm:max-w-xs sm:flex-1">
+              <Search
+                aria-hidden
+                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400"
+              />
+              <Input
+                type="search"
+                aria-label="사용자 검색"
+                placeholder="이메일 또는 닉네임 검색"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                권한
+                <select
+                  aria-label="권한 필터"
+                  value={roleFilter}
+                  onChange={(event) =>
+                    handleRoleFilterChange(event.target.value as RoleFilter)
+                  }
+                  className={SELECT_CLASS}
+                >
+                  {roleFilterOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                정렬
+                <select
+                  aria-label="정렬 기준"
+                  value={sort}
+                  onChange={(event) =>
+                    handleSortChange(event.target.value as AdminUserSort)
+                  }
+                  className={SELECT_CLASS}
+                >
+                  {sortOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
           </div>
 
-          {usersQuery.data.totalPages > 1 && (
-            <Pagination
-              page={usersQuery.data.page}
-              totalPages={usersQuery.data.totalPages}
-              onPageChange={setPage}
-              disabled={usersQuery.isFetching}
-            />
+          {usersQuery.data.totalElements === 0 ? (
+            <div className="rounded-md border border-slate-200 bg-white p-8 text-center">
+              <p className="text-sm font-medium text-slate-900">
+                {isFiltered
+                  ? "검색 결과가 없습니다"
+                  : "표시할 사용자가 없습니다"}
+              </p>
+              <p className="mt-1 text-sm text-slate-500">
+                {isFiltered
+                  ? "다른 검색어나 필터를 사용해 보세요."
+                  : "새 사용자가 가입하면 여기에 표시됩니다."}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
+                <table className="w-full text-sm">
+                  <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium text-slate-500">
+                    <tr>
+                      <th scope="col" className="px-4 py-3">
+                        이메일
+                      </th>
+                      <th scope="col" className="px-4 py-3">
+                        닉네임
+                      </th>
+                      <th scope="col" className="px-4 py-3">
+                        권한
+                      </th>
+                      <th scope="col" className="px-4 py-3">
+                        가입일
+                      </th>
+                      <th scope="col" className="px-4 py-3 text-right">
+                        작업
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {usersQuery.data.content.map((user) => (
+                      <tr key={user.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-3">
+                          <Link
+                            to={`/admin/users/${user.id}`}
+                            className="font-medium text-slate-950 underline-offset-2 hover:underline"
+                          >
+                            {user.email}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">
+                          {user.nickname}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge
+                            tone={user.role === "ADMIN" ? "info" : "neutral"}
+                          >
+                            {roleLabel(user.role)}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-slate-500">
+                          {formatDateTime(user.createdAt)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex justify-end gap-1">
+                            <Button asChild variant="ghost" size="sm">
+                              <Link to={`/admin/users/${user.id}`}>보기</Link>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              aria-label={`${user.email} 삭제`}
+                              onClick={() => openDelete(user)}
+                            >
+                              <Trash2
+                                aria-hidden
+                                className="size-4 text-red-600"
+                              />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {usersQuery.data.totalPages > 1 && (
+                <Pagination
+                  page={usersQuery.data.page}
+                  totalPages={usersQuery.data.totalPages}
+                  onPageChange={setPage}
+                  disabled={usersQuery.isFetching}
+                />
+              )}
+            </>
           )}
         </div>
       )}

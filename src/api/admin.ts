@@ -10,6 +10,8 @@ import { request } from "@/lib/http";
 
 export type { UserRole };
 
+export type AdminUserSort = "LATEST" | "OLDEST";
+
 export interface AdminUser {
   id: number;
   email: string;
@@ -29,19 +31,37 @@ export interface PageResponse<T> {
   last: boolean;
 }
 
+export interface AdminUserListParams {
+  page: number;
+  size: number;
+  sort: AdminUserSort;
+  keyword?: string;
+  role?: UserRole;
+}
+
 export const adminUserKeys = {
   all: ["admin", "users"] as const,
-  list: (page: number, size: number) =>
-    [...adminUserKeys.all, "list", page, size] as const,
+  list: (params: AdminUserListParams) =>
+    [...adminUserKeys.all, "list", params] as const,
   detail: (id: number) => [...adminUserKeys.all, id] as const,
 };
 
+function buildUserListQuery(params: AdminUserListParams): string {
+  const query = new URLSearchParams({
+    page: String(params.page),
+    size: String(params.size),
+    sort: params.sort,
+  });
+  if (params.keyword) query.set("keyword", params.keyword);
+  if (params.role) query.set("role", params.role);
+  return query.toString();
+}
+
 async function getAdminUsers(
-  page: number,
-  size: number,
+  params: AdminUserListParams,
 ): Promise<PageResponse<AdminUser>> {
   return request<PageResponse<AdminUser>>(
-    `/api/admin/users?page=${page}&size=${size}`,
+    `/api/admin/users?${buildUserListQuery(params)}`,
   );
 }
 
@@ -53,10 +73,10 @@ async function deleteAdminUser(id: number): Promise<undefined> {
   return request<undefined>(`/api/admin/users/${id}`, { method: "DELETE" });
 }
 
-export function useAdminUsersQuery(page: number, size: number) {
+export function useAdminUsersQuery(params: AdminUserListParams) {
   return useQuery({
-    queryKey: adminUserKeys.list(page, size),
-    queryFn: () => getAdminUsers(page, size),
+    queryKey: adminUserKeys.list(params),
+    queryFn: () => getAdminUsers(params),
     placeholderData: keepPreviousData,
   });
 }
