@@ -5,9 +5,14 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AdminUser } from "@/api/admin";
+import { AuthProvider } from "@/auth/auth-provider";
 import { routes } from "@/router";
 
+const meResponse = { id: 1, email: "admin@example.com", nickname: "관리자" };
+
 function renderAt(path: string) {
+  localStorage.setItem("accessToken", "test-token");
+  localStorage.setItem("refreshToken", "test-refresh");
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -15,7 +20,9 @@ function renderAt(path: string) {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
     </QueryClientProvider>,
   );
 }
@@ -25,6 +32,28 @@ function jsonResponse(body: unknown, status = 200) {
     status,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+function stubApi(handlers: {
+  users?: () => Response;
+  deleteUser?: () => Response;
+}) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string | URL, init?: RequestInit) => {
+      const target = String(url);
+      if (target.endsWith("/api/auth/me")) return jsonResponse(meResponse);
+      if (target.includes("/api/admin/users")) {
+        if (init?.method === "DELETE") {
+          return (
+            handlers.deleteUser ?? (() => jsonResponse(undefined, 204))
+          )();
+        }
+        return (handlers.users ?? (() => jsonResponse(users)))();
+      }
+      return jsonResponse({ message: "not found" }, 404);
+    }),
+  );
 }
 
 const users: AdminUser[] = [
@@ -48,14 +77,12 @@ const users: AdminUser[] = [
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  localStorage.clear();
 });
 
 describe("AdminUsersPage", () => {
   it("lists users from the admin API", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => jsonResponse(users)),
-    );
+    stubApi({});
 
     renderAt("/admin");
 
@@ -67,11 +94,28 @@ describe("AdminUsersPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows an empty state when there are no users", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => jsonResponse([])),
+  it("filters users by the search keyword", async () => {
+    const user = userEvent.setup();
+    stubApi({});
+
+    renderAt("/admin");
+    await screen.findByRole("link", { name: "admin@example.com" });
+
+    await user.type(
+      screen.getByRole("searchbox", { name: "사용자 검색" }),
+      "user@",
     );
+
+    expect(
+      screen.queryByRole("link", { name: "admin@example.com" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "user@example.com" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows an empty state when there are no users", async () => {
+    stubApi({ users: () => jsonResponse([]) });
 
     renderAt("/admin");
 
@@ -81,10 +125,7 @@ describe("AdminUsersPage", () => {
   });
 
   it("shows a permission message when the API responds with 403", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => jsonResponse({ message: "forbidden" }, 403)),
-    );
+    stubApi({ users: () => jsonResponse({ message: "forbidden" }, 403) });
 
     renderAt("/admin");
 
@@ -93,14 +134,9 @@ describe("AdminUsersPage", () => {
 
   it("keeps the dialog open with an error when delete fails", async () => {
     const user = userEvent.setup();
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (_url: string, init?: RequestInit) =>
-        init?.method === "DELETE"
-          ? jsonResponse({ message: "forbidden" }, 403)
-          : jsonResponse(users),
-      ),
-    );
+    stubApi({
+      deleteUser: () => jsonResponse({ message: "forbidden" }, 403),
+    });
 
     renderAt("/admin");
 

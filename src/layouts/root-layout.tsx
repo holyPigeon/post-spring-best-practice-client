@@ -1,9 +1,19 @@
-import { Activity, Bell, Search } from "lucide-react";
-import { Link, Outlet } from "react-router";
+import { Activity, Bell, LogOut, Search } from "lucide-react";
+import { Link, Outlet, useNavigate } from "react-router";
 
+import { useAuth } from "@/auth/auth-context";
 import { Button } from "@/components/ui/button";
 
 export function RootLayout() {
+  const { status, user, logout } = useAuth();
+  const navigate = useNavigate();
+  const isAuthenticated = status === "authenticated";
+
+  async function handleLogout() {
+    await logout();
+    navigate("/login");
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950">
       <header className="border-b border-slate-200 bg-white">
@@ -24,9 +34,11 @@ export function RootLayout() {
             <Button asChild variant="ghost" size="sm">
               <Link to="/">릴리즈</Link>
             </Button>
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/admin">관리자</Link>
-            </Button>
+            {isAuthenticated && (
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/admin">관리자</Link>
+              </Button>
+            )}
             <Button asChild variant="ghost" size="sm">
               <Link to="/">설정</Link>
             </Button>
@@ -38,6 +50,21 @@ export function RootLayout() {
             <Button variant="ghost" size="sm" aria-label="알림">
               <Bell aria-hidden className="size-4" />
             </Button>
+            {isAuthenticated ? (
+              <div className="flex items-center gap-2 pl-1">
+                <span className="hidden text-sm text-slate-600 sm:inline">
+                  {user?.nickname}
+                </span>
+                <Button variant="secondary" size="sm" onClick={handleLogout}>
+                  <LogOut aria-hidden className="size-4" />
+                  로그아웃
+                </Button>
+              </div>
+            ) : (
+              <Button asChild variant="secondary" size="sm">
+                <Link to="/login">로그인</Link>
+              </Button>
+            )}
           </div>
         </div>
       </header>
