@@ -1,5 +1,3 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-
 import { request, tokenStore } from "@/lib/http";
 
 export interface AuthTokens {
@@ -26,7 +24,7 @@ export const authKeys = {
   me: ["auth", "me"] as const,
 };
 
-async function login(data: LoginRequest): Promise<AuthTokens> {
+export async function login(data: LoginRequest): Promise<AuthTokens> {
   const tokens = await request<AuthTokens>("/api/auth/login", {
     method: "POST",
     body: data,
@@ -36,34 +34,22 @@ async function login(data: LoginRequest): Promise<AuthTokens> {
   return tokens;
 }
 
-async function logout(): Promise<void> {
+export async function logout(): Promise<void> {
   const refreshToken = tokenStore.getRefresh();
-  if (refreshToken) {
-    await request<undefined>("/api/auth/logout", {
-      method: "POST",
-      body: { refreshToken } satisfies LogoutRequest,
-      auth: false,
-    });
+  try {
+    if (refreshToken) {
+      await request<undefined>("/api/auth/logout", {
+        method: "POST",
+        body: { refreshToken } satisfies LogoutRequest,
+        auth: false,
+      });
+    }
+  } finally {
+    // 서버 로그아웃 실패와 무관하게 로컬 세션은 반드시 정리한다.
+    tokenStore.clear();
   }
-  tokenStore.clear();
 }
 
-async function getMe(): Promise<MeResponse> {
+export async function getMe(): Promise<MeResponse> {
   return request<MeResponse>("/api/auth/me");
-}
-
-export function useMeQuery() {
-  return useQuery({
-    queryKey: authKeys.me,
-    queryFn: getMe,
-    enabled: !!tokenStore.getAccess(),
-  });
-}
-
-export function useLoginMutation() {
-  return useMutation({ mutationFn: login });
-}
-
-export function useLogoutMutation() {
-  return useMutation({ mutationFn: logout });
 }

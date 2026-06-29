@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef } from "react";
 
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
 interface ConfirmDialogProps {
@@ -83,9 +84,9 @@ export function ConfirmDialog({
           </p>
         )}
         {error && (
-          <p role="alert" className="mt-3 text-sm text-red-600">
-            {error}
-          </p>
+          <div className="mt-3">
+            <Alert tone="error">{error}</Alert>
+          </div>
         )}
         <div className="mt-5 flex justify-end gap-2">
           <Button

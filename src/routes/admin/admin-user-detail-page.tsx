@@ -80,7 +80,10 @@ export function AdminUserDetailPage() {
 
   function handleConfirmDelete() {
     deleteMutation.mutate(user.id, {
-      onSuccess: () => navigate("/admin"),
+      onSuccess: () =>
+        navigate("/admin", {
+          state: { flash: `${user.email} 계정을 삭제했습니다.` },
+        }),
     });
   }
 
