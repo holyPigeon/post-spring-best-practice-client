@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -40,6 +40,29 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+function pageResponse(
+  content: AdminUser[],
+  overrides: Partial<{
+    page: number;
+    size: number;
+    totalElements: number;
+    totalPages: number;
+    first: boolean;
+    last: boolean;
+  }> = {},
+) {
+  return {
+    content,
+    page: 0,
+    size: 20,
+    totalElements: content.length,
+    totalPages: content.length === 0 ? 0 : 1,
+    first: true,
+    last: true,
+    ...overrides,
+  };
+}
+
 function stubApi(handlers: {
   users?: () => Response;
   deleteUser?: () => Response;
@@ -55,7 +78,7 @@ function stubApi(handlers: {
             handlers.deleteUser ?? (() => jsonResponse(undefined, 204))
           )();
         }
-        return (handlers.users ?? (() => jsonResponse(users)))();
+        return (handlers.users ?? (() => jsonResponse(pageResponse(users))))();
       }
       return jsonResponse({ message: "not found" }, 404);
     }),
@@ -101,28 +124,135 @@ describe("AdminUsersPage", () => {
     expect(screen.getByRole("link", { name: "관리자" })).toBeInTheDocument();
   });
 
-  it("filters users by the search keyword", async () => {
+  it("navigates between pages", async () => {
     const user = userEvent.setup();
-    stubApi({});
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string | URL) => {
+        const target = String(url);
+        if (target.endsWith("/api/auth/me")) return jsonResponse(meResponse);
+        if (target.includes("/api/admin/users")) {
+          const requestedPage = Number(
+            new URL(target).searchParams.get("page") ?? "0",
+          );
+          const content = requestedPage === 0 ? [users[0]] : [users[1]];
+          return jsonResponse(
+            pageResponse(content, {
+              page: requestedPage,
+              size: 1,
+              totalElements: 2,
+              totalPages: 2,
+              first: requestedPage === 0,
+              last: requestedPage === 1,
+            }),
+          );
+        }
+        return jsonResponse({ message: "not found" }, 404);
+      }),
+    );
+
+    renderAt("/admin");
+
+    expect(
+      await screen.findByRole("link", { name: "admin@example.com" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "다음" }));
+
+    expect(
+      await screen.findByRole("link", { name: "user@example.com" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "admin@example.com" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("jumps to a page via its number", async () => {
+    const user = userEvent.setup();
+    const third: AdminUser = {
+      id: 3,
+      email: "third@example.com",
+      nickname: "셋째",
+      role: "USER",
+      createdAt: "2024-03-01T09:00:00",
+      updatedAt: "2024-03-01T09:00:00",
+    };
+    const paged = [users[0], users[1], third];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string | URL) => {
+        const target = String(url);
+        if (target.endsWith("/api/auth/me")) return jsonResponse(meResponse);
+        if (target.includes("/api/admin/users")) {
+          const requestedPage = Number(
+            new URL(target).searchParams.get("page") ?? "0",
+          );
+          return jsonResponse(
+            pageResponse([paged[requestedPage]], {
+              page: requestedPage,
+              size: 1,
+              totalElements: 3,
+              totalPages: 3,
+              first: requestedPage === 0,
+              last: requestedPage === 2,
+            }),
+          );
+        }
+        return jsonResponse({ message: "not found" }, 404);
+      }),
+    );
+
+    renderAt("/admin");
+
+    await screen.findByRole("link", { name: "admin@example.com" });
+    await user.click(screen.getByRole("button", { name: "페이지 3" }));
+
+    expect(
+      await screen.findByRole("link", { name: "third@example.com" }),
+    ).toBeInTheDocument();
+  });
+
+  it("searches users by keyword on the server", async () => {
+    const user = userEvent.setup();
+    const requestedKeywords: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string | URL) => {
+        const target = String(url);
+        if (target.endsWith("/api/auth/me")) return jsonResponse(meResponse);
+        if (target.includes("/api/admin/users")) {
+          const keyword = new URL(target).searchParams.get("keyword");
+          if (keyword) requestedKeywords.push(keyword);
+          const content = keyword?.toLowerCase().includes("user")
+            ? [users[1]]
+            : users;
+          return jsonResponse(pageResponse(content));
+        }
+        return jsonResponse({ message: "not found" }, 404);
+      }),
+    );
 
     renderAt("/admin");
     await screen.findByRole("link", { name: "admin@example.com" });
 
     await user.type(
       screen.getByRole("searchbox", { name: "사용자 검색" }),
-      "user@",
+      "user",
     );
 
-    expect(
-      screen.queryByRole("link", { name: "admin@example.com" }),
-    ).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("link", { name: "admin@example.com" }),
+      ).not.toBeInTheDocument();
+    });
     expect(
       screen.getByRole("link", { name: "user@example.com" }),
     ).toBeInTheDocument();
+    expect(requestedKeywords).toContain("user");
   });
 
   it("shows an empty state when there are no users", async () => {
-    stubApi({ users: () => jsonResponse([]) });
+    stubApi({ users: () => jsonResponse(pageResponse([])) });
 
     renderAt("/admin");
 
@@ -139,10 +269,11 @@ describe("AdminUsersPage", () => {
     expect(await screen.findByText("접근 권한이 없습니다")).toBeInTheDocument();
   });
 
-  it("keeps the dialog open with an error when delete fails", async () => {
+  it("surfaces the server message when delete is blocked", async () => {
     const user = userEvent.setup();
     stubApi({
-      deleteUser: () => jsonResponse({ message: "forbidden" }, 403),
+      deleteUser: () =>
+        jsonResponse({ message: "마지막 관리자는 삭제할 수 없습니다." }, 409),
     });
 
     renderAt("/admin");
@@ -153,7 +284,7 @@ describe("AdminUsersPage", () => {
     await user.click(screen.getByRole("button", { name: "삭제" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "삭제하지 못했습니다",
+      "마지막 관리자는 삭제할 수 없습니다.",
     );
   });
 
@@ -179,7 +310,9 @@ describe("AdminUsersPage", () => {
         if (target.endsWith("/api/auth/me")) {
           return jsonResponse({ ...meResponse, role: "USER" });
         }
-        if (target.includes("/api/admin/users")) return jsonResponse(users);
+        if (target.includes("/api/admin/users")) {
+          return jsonResponse(pageResponse(users));
+        }
         return jsonResponse({ message: "not found" }, 404);
       }),
     );
@@ -207,7 +340,9 @@ describe("AdminUsersPage", () => {
             role: meCalls === 1 ? "ADMIN" : "USER",
           });
         }
-        if (target.includes("/api/admin/users")) return jsonResponse(users);
+        if (target.includes("/api/admin/users")) {
+          return jsonResponse(pageResponse(users));
+        }
         return jsonResponse({ message: "not found" }, 404);
       }),
     );

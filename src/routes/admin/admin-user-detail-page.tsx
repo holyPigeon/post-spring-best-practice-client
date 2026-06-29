@@ -134,9 +134,11 @@ export function AdminUserDetailPage() {
         confirmLabel="삭제"
         isPending={deleteMutation.isPending}
         error={
-          deleteMutation.isError
-            ? "삭제하지 못했습니다. 잠시 후 다시 시도해 주세요."
-            : undefined
+          deleteMutation.error instanceof ApiError
+            ? deleteMutation.error.message
+            : deleteMutation.isError
+              ? "삭제하지 못했습니다. 잠시 후 다시 시도해 주세요."
+              : undefined
         }
         onConfirm={handleConfirmDelete}
         onCancel={closeDelete}
