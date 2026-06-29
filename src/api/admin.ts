@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { type UserRole } from "@/api/auth";
 import { request } from "@/lib/http";
 
-export type UserRole = "USER" | "ADMIN";
+export type { UserRole };
 
 export interface AdminUser {
   id: number;

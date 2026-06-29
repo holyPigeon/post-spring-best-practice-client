@@ -9,7 +9,12 @@ import { AuthProvider } from "@/auth/auth-provider";
 import { tokenStore } from "@/lib/http";
 import { routes } from "@/router";
 
-const meResponse = { id: 1, email: "admin@example.com", nickname: "관리자" };
+const meResponse = {
+  id: 1,
+  email: "admin@example.com",
+  nickname: "관리자",
+  role: "ADMIN",
+};
 
 function renderAt(path: string) {
   localStorage.setItem("accessToken", "test-token");
@@ -93,6 +98,7 @@ describe("AdminUsersPage", () => {
     expect(
       screen.getByRole("link", { name: "user@example.com" }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "관리자" })).toBeInTheDocument();
   });
 
   it("filters users by the search keyword", async () => {
@@ -163,6 +169,29 @@ describe("AdminUsersPage", () => {
     await user.click(screen.getByRole("button", { name: "삭제" }));
 
     expect(await screen.findByText(/계정을 삭제했습니다/)).toBeInTheDocument();
+  });
+
+  it("blocks non-admin users from the admin area", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string | URL) => {
+        const target = String(url);
+        if (target.endsWith("/api/auth/me")) {
+          return jsonResponse({ ...meResponse, role: "USER" });
+        }
+        if (target.includes("/api/admin/users")) return jsonResponse(users);
+        return jsonResponse({ message: "not found" }, 404);
+      }),
+    );
+
+    renderAt("/admin");
+
+    expect(
+      await screen.findByText("관리자만 접근할 수 있는 페이지입니다."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "관리자" }),
+    ).not.toBeInTheDocument();
   });
 
   it("redirects to login when the session is cleared mid-session", async () => {

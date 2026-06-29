@@ -6,7 +6,7 @@ import { useAuth } from "@/auth/auth-context";
 import { Button } from "@/components/ui/button";
 
 export function RootLayout() {
-  const { status, user, logout } = useAuth();
+  const { status, user, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isAuthenticated = status === "authenticated";
@@ -58,7 +58,7 @@ export function RootLayout() {
             <span>Post Spring</span>
           </Link>
 
-          {isAuthenticated && (
+          {isAdmin && (
             <nav
               aria-label="주요 메뉴"
               className="hidden items-center gap-1 md:flex"
@@ -119,7 +119,7 @@ export function RootLayout() {
             className="border-t border-slate-200 px-4 py-3 md:hidden"
           >
             <ul className="space-y-1">
-              {isAuthenticated && (
+              {isAdmin && (
                 <li>
                   <Link
                     to="/admin"

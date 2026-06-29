@@ -27,7 +27,7 @@ export const routes = [
       },
       {
         path: "admin",
-        element: <RequireAuth />,
+        element: <RequireAuth requireAdmin />,
         children: [
           {
             element: <AdminLayout />,

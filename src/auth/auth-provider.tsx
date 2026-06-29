@@ -71,7 +71,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
           : "loading";
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user: meQuery.data ?? null, status, login, logout }),
+    () => ({
+      user: meQuery.data ?? null,
+      status,
+      isAdmin: status === "authenticated" && meQuery.data?.role === "ADMIN",
+      login,
+      logout,
+    }),
     [meQuery.data, status, login, logout],
   );
 
