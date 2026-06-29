@@ -1,21 +1,45 @@
 import { Activity, Bell, LogOut, Menu, Search, X } from "lucide-react";
-import { useState } from "react";
-import { Link, Outlet, useNavigate } from "react-router";
+import { useEffect, useRef, useState } from "react";
+import { Link, Outlet, useLocation, useNavigate } from "react-router";
 
 import { useAuth } from "@/auth/auth-context";
 import { Button } from "@/components/ui/button";
 
-const navItems = [
-  { to: "/", label: "워크스페이스" },
-  { to: "/", label: "릴리즈" },
-  { to: "/", label: "설정" },
-];
-
 export function RootLayout() {
   const { status, user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const isAuthenticated = status === "authenticated";
   const [menuOpen, setMenuOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setMenuOpen(false);
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (
+        headerRef.current &&
+        !headerRef.current.contains(event.target as Node)
+      ) {
+        setMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [menuOpen]);
 
   async function handleLogout() {
     setMenuOpen(false);
@@ -25,7 +49,7 @@ export function RootLayout() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950">
-      <header className="border-b border-slate-200 bg-white">
+      <header ref={headerRef} className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link to="/" className="flex items-center gap-3 font-semibold">
             <span className="flex size-9 items-center justify-center rounded-md bg-slate-950 text-white">
@@ -34,21 +58,16 @@ export function RootLayout() {
             <span>Post Spring</span>
           </Link>
 
-          <nav
-            aria-label="주요 메뉴"
-            className="hidden items-center gap-1 md:flex"
-          >
-            {navItems.map((item) => (
-              <Button key={item.label} asChild variant="ghost" size="sm">
-                <Link to={item.to}>{item.label}</Link>
-              </Button>
-            ))}
-            {isAuthenticated && (
+          {isAuthenticated && (
+            <nav
+              aria-label="주요 메뉴"
+              className="hidden items-center gap-1 md:flex"
+            >
               <Button asChild variant="ghost" size="sm">
                 <Link to="/admin">관리자</Link>
               </Button>
-            )}
-          </nav>
+            </nav>
+          )}
 
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" aria-label="검색">
@@ -100,17 +119,6 @@ export function RootLayout() {
             className="border-t border-slate-200 px-4 py-3 md:hidden"
           >
             <ul className="space-y-1">
-              {navItems.map((item) => (
-                <li key={item.label}>
-                  <Link
-                    to={item.to}
-                    onClick={() => setMenuOpen(false)}
-                    className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
               {isAuthenticated && (
                 <li>
                   <Link
