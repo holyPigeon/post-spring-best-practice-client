@@ -7,7 +7,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "@/auth/auth-provider";
 import { routes } from "@/router";
 
-const meResponse = { id: 1, email: "admin@example.com", nickname: "관리자" };
+const meResponse = {
+  id: 1,
+  email: "admin@example.com",
+  nickname: "관리자",
+  role: "ADMIN",
+};
 
 function renderAt(path: string) {
   const queryClient = new QueryClient({

@@ -1,5 +1,7 @@
 import { request, tokenStore } from "@/lib/http";
 
+export type UserRole = "USER" | "ADMIN";
+
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
@@ -18,6 +20,7 @@ export interface MeResponse {
   id: number;
   email: string;
   nickname: string;
+  role: UserRole;
 }
 
 export const authKeys = {

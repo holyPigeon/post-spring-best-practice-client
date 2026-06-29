@@ -7,6 +7,7 @@ export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 export interface AuthContextValue {
   user: MeResponse | null;
   status: AuthStatus;
+  isAdmin: boolean;
   login: (data: LoginRequest) => Promise<void>;
   logout: () => Promise<void>;
 }
