@@ -34,7 +34,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
     queryFn: getMe,
     enabled: accessToken !== null,
     retry: false,
-    staleTime: 5 * 60_000,
+    // 인증/권한의 단일 소스라 짧게 유지하고 탭 복귀 시 재검증한다.
+    staleTime: 60_000,
+    refetchOnWindowFocus: true,
   });
 
   useEffect(() => {

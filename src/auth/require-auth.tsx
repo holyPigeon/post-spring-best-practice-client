@@ -1,5 +1,8 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Link, Navigate, Outlet, useLocation } from "react-router";
 
+import { authKeys } from "@/api/auth";
 import { useAuth } from "@/auth/auth-context";
 import { Button } from "@/components/ui/button";
 
@@ -10,6 +13,14 @@ interface RequireAuthProps {
 export function RequireAuth({ requireAdmin = false }: RequireAuthProps) {
   const { status, isAdmin } = useAuth();
   const location = useLocation();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    // 관리자 영역에 들어올 때 현재 사용자 정보를 재검증해 권한 변경(승격·강등)을 빨리 반영한다.
+    if (requireAdmin && status === "authenticated") {
+      queryClient.invalidateQueries({ queryKey: authKeys.me });
+    }
+  }, [requireAdmin, status, queryClient]);
 
   if (status === "loading") {
     return (

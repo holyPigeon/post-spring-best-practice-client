@@ -194,6 +194,31 @@ describe("AdminUsersPage", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("re-checks the role on admin entry and blocks a demoted user", async () => {
+    let meCalls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string | URL) => {
+        const target = String(url);
+        if (target.endsWith("/api/auth/me")) {
+          meCalls += 1;
+          return jsonResponse({
+            ...meResponse,
+            role: meCalls === 1 ? "ADMIN" : "USER",
+          });
+        }
+        if (target.includes("/api/admin/users")) return jsonResponse(users);
+        return jsonResponse({ message: "not found" }, 404);
+      }),
+    );
+
+    renderAt("/admin");
+
+    expect(
+      await screen.findByText("관리자만 접근할 수 있는 페이지입니다."),
+    ).toBeInTheDocument();
+  });
+
   it("redirects to login when the session is cleared mid-session", async () => {
     stubApi({});
 
