@@ -140,13 +140,13 @@ tests/e2e/           # Playwright E2E 테스트
 
 작업을 시작하기 전에 관련 문서를 먼저 확인합니다.
 
-| 작업                 | 문서                           |
-| -------------------- | ------------------------------ |
-| 에이전트 작업 가이드 | `AGENTS.md`                    |
-| 구현 · 리팩터링      | `.claude/coding-style.md`      |
-| UI · 컴포넌트 · 화면 | `.claude/ui-style.md`          |
-| 테스트 작성 · 수정   | `.claude/testing-style.md`     |
-| 커밋 메시지          | `.claude/commit-convention.md` |
+| 작업                 | 문서                              |
+| -------------------- | --------------------------------- |
+| 에이전트 작업 가이드 | `AGENTS.md`                       |
+| 구현 · 리팩터링      | `docs/agent/coding-style.md`      |
+| UI · 컴포넌트 · 화면 | `docs/agent/ui-style.md`          |
+| 테스트 작성 · 수정   | `docs/agent/testing-style.md`     |
+| 커밋 메시지          | `docs/agent/commit-convention.md` |
 
 ## 자주 겪는 문제
 

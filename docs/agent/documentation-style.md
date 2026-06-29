@@ -1,6 +1,6 @@
 # Documentation Style
 
-`AGENTS.md`, `CLAUDE.md`, `.claude/*.md` 에이전트 참고 문서를 수정할 때만 사용한다.
+`AGENTS.md`, `CLAUDE.md`, `docs/agent/*.md` 에이전트 참고 문서를 수정할 때만 사용한다.
 
 ## 에이전트 규칙 작성
 
@@ -19,7 +19,7 @@
 ## 문서 배치
 
 - `AGENTS.md`와 `CLAUDE.md`는 라우터로 유지한다.
-- 작업에 꼭 필요한 규칙은 가장 관련 있는 `.claude/*.md`에 둔다.
+- 작업에 꼭 필요한 규칙은 가장 관련 있는 `docs/agent/*.md`에 둔다.
 - 긴 예시는 선택 문서로 분리하고, 필요한 작업에서만 읽도록 라우팅한다.
 - 짧은 타이브레이커 하나로 충분하면 새 always-read 문서를 만들지 않는다.
 
